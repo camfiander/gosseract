@@ -7,7 +7,19 @@
 #endif
 
 #include <stdio.h>
-#include <unistd.h>
+#ifdef _WIN32
+    #include <io.h>      // for _dup, _dup2, _close, _fileno
+    #include <fcntl.h>   // for file control
+    #define dup _dup
+    #define dup2 _dup2
+    #define close _close
+    #define fileno _fileno
+    #define STDERR_FILENO 2
+    #define DEV_NULL "NUL"
+#else
+    #include <unistd.h>  // for dup, dup2, close on POSIX systems
+    #define DEV_NULL "/dev/null"
+#endif
 #include "tessbridge.h"
 
 TessBaseAPI Create() {
@@ -47,7 +59,7 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
     fflush(stderr);
     int original_stderr;
     original_stderr = dup(STDERR_FILENO);
-    (void)freopen("/dev/null", "a", stderr);
+    (void)freopen(DEV_NULL, "a", stderr);
     setbuf(stderr, errbuf);
     // }}}
 
@@ -61,7 +73,7 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
     }
 
     // {{{ Restore default stderr
-    (void)freopen("/dev/null", "a", stderr);
+    (void)freopen(DEV_NULL, "a", stderr);
     dup2(original_stderr, STDERR_FILENO);
     close(original_stderr);
     setbuf(stderr, NULL);
